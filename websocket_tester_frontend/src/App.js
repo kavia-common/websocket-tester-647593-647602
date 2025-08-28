@@ -11,6 +11,7 @@ import './App.css';
  * - Connection status and error notifications
  * - Light theme modern styling using CSS variables
  * - Snippets panel for quick message insertion and user-saved snippets
+ * - Saved connection URLs and saved templates (re-usable message skeletons)
  */
 
 // Utility: get timestamp string
@@ -33,6 +34,8 @@ const DEFAULT_SNIPPETS = [
 
 // Storage keys
 const SNIPPETS_KEY = 'wsTester.snippets.v1';
+const URLS_KEY = 'wsTester.urls.v1';
+const TEMPLATES_KEY = 'wsTester.templates.v1';
 
 // PUBLIC_INTERFACE
 function App() {
@@ -57,19 +60,26 @@ function App() {
   const [log, setLog] = useState([]);
   const logEndRef = useRef(null);
 
-  /** Snippets state */
+  /** Snippets (quick samples and user saved snippets, persisted) */
   const [snippets, setSnippets] = useState([]);
   const [snippetName, setSnippetName] = useState('');
 
+  /** Saved URLs (with optional labels) */
+  const [savedUrls, setSavedUrls] = useState([]);
+  const [urlLabel, setUrlLabel] = useState('');
+
+  /** Templates (re-usable message skeletons distinct from snippets) */
+  const [templates, setTemplates] = useState([]);
+  const [templateName, setTemplateName] = useState('');
+
   const protocolHint = useMemo(() => (isSecure ? 'wss://' : 'ws://'), [isSecure]);
 
-  // Load snippets from localStorage on mount
+  // Load persisted data on mount
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(SNIPPETS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // ensure IDs exist
+      const rawSnippets = localStorage.getItem(SNIPPETS_KEY);
+      if (rawSnippets) {
+        const parsed = JSON.parse(rawSnippets);
         const withIds = parsed.map((s) => ({ id: s.id || crypto.randomUUID(), ...s }));
         setSnippets(withIds);
       } else {
@@ -78,11 +88,32 @@ function App() {
     } catch {
       setSnippets(DEFAULT_SNIPPETS);
     }
+
+    try {
+      const rawUrls = localStorage.getItem(URLS_KEY);
+      if (rawUrls) {
+        const parsed = JSON.parse(rawUrls);
+        const withIds = parsed.map((u) => ({ id: u.id || crypto.randomUUID(), ...u }));
+        setSavedUrls(withIds);
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const rawTemplates = localStorage.getItem(TEMPLATES_KEY);
+      if (rawTemplates) {
+        const parsed = JSON.parse(rawTemplates);
+        const withIds = parsed.map((t) => ({ id: t.id || crypto.randomUUID(), ...t }));
+        setTemplates(withIds);
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
-  // Persist user snippets (including defaults shown together) to localStorage
+  // Persist user snippets to localStorage (exclude defaults)
   useEffect(() => {
-    // Persist only user-created snippets; keep defaults separate by filtering out default ids prefix
     const userSnippets = snippets.filter((s) => !s.id?.startsWith('ex-'));
     try {
       localStorage.setItem(SNIPPETS_KEY, JSON.stringify(userSnippets));
@@ -90,6 +121,24 @@ function App() {
       // ignore storage errors
     }
   }, [snippets]);
+
+  // Persist saved URLs
+  useEffect(() => {
+    try {
+      localStorage.setItem(URLS_KEY, JSON.stringify(savedUrls));
+    } catch {
+      // ignore
+    }
+  }, [savedUrls]);
+
+  // Persist templates
+  useEffect(() => {
+    try {
+      localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+    } catch {
+      // ignore
+    }
+  }, [templates]);
 
   // Auto-scroll to bottom on new log entries
   useEffect(() => {
@@ -250,6 +299,62 @@ function App() {
     setSnippetName('');
   };
 
+  // PUBLIC_INTERFACE
+  const saveCurrentUrl = () => {
+    const u = url.trim();
+    if (!u) return;
+    const entry = {
+      id: crypto.randomUUID(),
+      label: urlLabel.trim() || u,
+      url: u,
+      secure: isSecure,
+    };
+    setSavedUrls((prev) => {
+      // avoid exact duplicate url+secure combos if already saved
+      const exists = prev.some((x) => x.url === entry.url && x.secure === entry.secure && x.label === entry.label);
+      if (exists) return prev;
+      return [...prev, entry];
+    });
+    setUrlLabel('');
+  };
+
+  // PUBLIC_INTERFACE
+  const selectSavedUrl = (entry) => {
+    setUrl(entry.url);
+    setIsSecure(entry.secure ?? true);
+  };
+
+  // PUBLIC_INTERFACE
+  const deleteSavedUrl = (id) => {
+    setSavedUrls((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  // PUBLIC_INTERFACE
+  const saveCurrentAsTemplate = () => {
+    const content = message.trim();
+    if (!content) return;
+    const name = templateName.trim() || (isJson ? 'New JSON template' : 'New text template');
+    const newItem = {
+      id: crypto.randomUUID(),
+      name,
+      content,
+      type: isJson ? 'json' : 'text',
+    };
+    setTemplates((prev) => [...prev, newItem]);
+    setTemplateName('');
+  };
+
+  // PUBLIC_INTERFACE
+  const applyTemplate = (tpl) => {
+    setMessage(tpl.content);
+    setIsJson(tpl.type === 'json');
+  };
+
+  // PUBLIC_INTERFACE
+  const deleteTemplate = (id) => {
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+  };
+
   const allSnippets = useMemo(() => {
     // Merge defaults and user snippets for display
     const user = snippets.filter((s) => !s.id?.startsWith('ex-'));
@@ -330,6 +435,72 @@ function App() {
             </div>
           )}
 
+          {/* Saved URLs Panel */}
+          <div className="snippets">
+            <div className="snippets-header">
+              <h3>Saved Connections</h3>
+              <span className="hint">Save, select, or manage WebSocket endpoints</span>
+            </div>
+
+            <div className="snippets-body">
+              {savedUrls.length === 0 ? (
+                <div className="empty">No saved URLs yet. Save the current input to reuse later.</div>
+              ) : (
+                <div className="snippet-grid">
+                  {savedUrls.map((entry) => (
+                    <div key={entry.id} className="snippet-card" title={entry.label || entry.url}>
+                      <div className="snippet-meta">
+                        <span className="badge">{entry.secure ? 'wss' : 'ws'}</span>
+                        <span className="snippet-name">{entry.label || entry.url}</span>
+                      </div>
+                      <pre className="snippet-content">{entry.url}</pre>
+                      <div className="snippet-actions">
+                        <button
+                          className="btn ghost"
+                          onClick={() => selectSavedUrl(entry)}
+                          aria-label={`Select URL ${entry.label || entry.url}`}
+                        >
+                          Use
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={() => deleteSavedUrl(entry.id)}
+                          aria-label={`Delete URL ${entry.label || entry.url}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="snippet-save">
+              <div className="input-row">
+                <div className="input-group">
+                  <label htmlFor="url-label">Save current URL</label>
+                  <input
+                    id="url-label"
+                    type="text"
+                    placeholder="Optional label (e.g., Production, Local dev)"
+                    value={urlLabel}
+                    onChange={(e) => setUrlLabel(e.target.value)}
+                    disabled={connecting || connected}
+                  />
+                </div>
+                <button
+                  className="btn"
+                  onClick={saveCurrentUrl}
+                  disabled={!url.trim() || connecting || connected}
+                  aria-label="Save current URL"
+                >
+                  Save URL
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Snippets Panel */}
           <div className="snippets">
             <div className="snippets-header">
@@ -394,6 +565,73 @@ function App() {
                   aria-label="Save current message as snippet"
                 >
                   Save Snippet
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Templates Panel */}
+          <div className="snippets">
+            <div className="snippets-header">
+              <h3>Templates</h3>
+              <span className="hint">Reusable message skeletons you can insert and customize</span>
+            </div>
+
+            <div className="snippets-body">
+              {templates.length === 0 ? (
+                <div className="empty">No templates saved yet. Create one from the current message.</div>
+              ) : (
+                <div className="snippet-grid">
+                  {templates.map((tpl) => (
+                    <div key={tpl.id} className="snippet-card" title={tpl.name}>
+                      <div className="snippet-meta">
+                        <span className={`badge ${tpl.type === 'json' ? 'badge-json' : 'badge-text'}`}>
+                          {tpl.type}
+                        </span>
+                        <span className="snippet-name">{tpl.name}</span>
+                      </div>
+                      <pre className="snippet-content">{tpl.content}</pre>
+                      <div className="snippet-actions">
+                        <button
+                          className="btn ghost"
+                          onClick={() => applyTemplate(tpl)}
+                          aria-label={`Insert template ${tpl.name}`}
+                        >
+                          Insert
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={() => deleteTemplate(tpl.id)}
+                          aria-label={`Delete template ${tpl.name}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="snippet-save">
+              <div className="input-row">
+                <div className="input-group">
+                  <label htmlFor="template-name">Save current message as template</label>
+                  <input
+                    id="template-name"
+                    type="text"
+                    placeholder="Template name (e.g., Auth skeleton, Subscription)"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn"
+                  onClick={saveCurrentAsTemplate}
+                  disabled={!message.trim()}
+                  aria-label="Save current message as template"
+                >
+                  Save Template
                 </button>
               </div>
             </div>

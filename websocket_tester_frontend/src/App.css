@@ -199,6 +199,25 @@ body {
   padding: 0 2px 8px;
   border-bottom: 1px dashed #e9eef6;
 }
+
+/* Minor visual tweaks to support saved panels reuse */
+.snippets + .snippets {
+  margin-top: 16px;
+}
+.snippets h3 {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.snippets h3::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.08);
+}
 .snippets-header h3 {
   margin: 0;
   font-size: 16px;
