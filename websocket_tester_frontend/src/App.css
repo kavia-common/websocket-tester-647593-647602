@@ -184,6 +184,102 @@ body {
 }
 .alert.error {}
 
+/* Snippets */
+.snippets {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+.snippets-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px 8px;
+  border-bottom: 1px dashed #e9eef6;
+}
+.snippets-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.snippets-body {
+  margin-top: 10px;
+}
+.snippet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.snippet-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.snippet-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.snippet-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.snippet-content {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  background: #fbfdff;
+  border: 1px dashed #e6eef9;
+  border-radius: 8px;
+  padding: 8px;
+  color: #0f172a;
+  max-height: 120px;
+  overflow: auto;
+}
+.snippet-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.badge-json {
+  background: rgba(25, 118, 210, 0.1);
+  border-color: rgba(25, 118, 210, 0.2);
+  color: var(--color-primary);
+}
+.badge-text {
+  background: rgba(66, 66, 66, 0.08);
+  border-color: rgba(66, 66, 66, 0.2);
+  color: var(--color-secondary);
+}
+.snippet-save {
+  margin-top: 12px;
+  border-top: 1px dashed #e9eef6;
+  padding-top: 12px;
+}
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+.snippet-save .input-group input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #fff;
+}
+
 /* Compose area */
 .compose {
   margin-top: 16px;
@@ -317,5 +413,11 @@ body {
   }
   .controls {
     grid-template-columns: 1fr 1fr;
+  }
+  .snippet-grid {
+    grid-template-columns: 1fr;
+  }
+  .input-row {
+    grid-template-columns: 1fr;
   }
 }

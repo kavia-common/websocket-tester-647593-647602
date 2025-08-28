@@ -10,6 +10,7 @@ import './App.css';
  * - Clear log functionality
  * - Connection status and error notifications
  * - Light theme modern styling using CSS variables
+ * - Snippets panel for quick message insertion and user-saved snippets
  */
 
 // Utility: get timestamp string
@@ -21,6 +22,17 @@ const DIRECTION = {
   RECEIVED: 'received',
   SYSTEM: 'system',
 };
+
+// Default example snippets
+const DEFAULT_SNIPPETS = [
+  { id: 'ex-hello', name: 'Hello text', content: 'Hello, WebSocket!', type: 'text' },
+  { id: 'ex-ping', name: 'JSON Ping', content: JSON.stringify({ type: 'ping' }, null, 2), type: 'json' },
+  { id: 'ex-echo', name: 'Echo JSON', content: JSON.stringify({ action: 'echo', value: 'sample' }, null, 2), type: 'json' },
+  { id: 'ex-time', name: 'Time request', content: JSON.stringify({ cmd: 'time' }, null, 2), type: 'json' },
+];
+
+// Storage keys
+const SNIPPETS_KEY = 'wsTester.snippets.v1';
 
 // PUBLIC_INTERFACE
 function App() {
@@ -45,7 +57,39 @@ function App() {
   const [log, setLog] = useState([]);
   const logEndRef = useRef(null);
 
+  /** Snippets state */
+  const [snippets, setSnippets] = useState([]);
+  const [snippetName, setSnippetName] = useState('');
+
   const protocolHint = useMemo(() => (isSecure ? 'wss://' : 'ws://'), [isSecure]);
+
+  // Load snippets from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SNIPPETS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // ensure IDs exist
+        const withIds = parsed.map((s) => ({ id: s.id || crypto.randomUUID(), ...s }));
+        setSnippets(withIds);
+      } else {
+        setSnippets(DEFAULT_SNIPPETS);
+      }
+    } catch {
+      setSnippets(DEFAULT_SNIPPETS);
+    }
+  }, []);
+
+  // Persist user snippets (including defaults shown together) to localStorage
+  useEffect(() => {
+    // Persist only user-created snippets; keep defaults separate by filtering out default ids prefix
+    const userSnippets = snippets.filter((s) => !s.id?.startsWith('ex-'));
+    try {
+      localStorage.setItem(SNIPPETS_KEY, JSON.stringify(userSnippets));
+    } catch {
+      // ignore storage errors
+    }
+  }, [snippets]);
 
   // Auto-scroll to bottom on new log entries
   useEffect(() => {
@@ -182,6 +226,37 @@ function App() {
     addLog({ type: DIRECTION.SYSTEM, text: 'Log cleared' });
   };
 
+  // PUBLIC_INTERFACE
+  const applySnippet = (snippet) => {
+    // Insert content and set JSON toggle based on snippet type
+    setMessage(snippet.content);
+    setIsJson(snippet.type === 'json');
+  };
+
+  // PUBLIC_INTERFACE
+  const deleteSnippet = (id) => {
+    // Allow deletion only for user-defined snippets (not default examples)
+    setSnippets((prev) => prev.filter((s) => s.id !== id || s.id.startsWith('ex-')));
+  };
+
+  // PUBLIC_INTERFACE
+  const saveCurrentAsSnippet = () => {
+    const content = message.trim();
+    if (!content) return;
+    const type = isJson ? 'json' : 'text';
+    const name = snippetName.trim() || (isJson ? 'Saved JSON' : 'Saved text');
+    const newSnippet = { id: crypto.randomUUID(), name, content, type };
+    setSnippets((prev) => [...prev, newSnippet]);
+    setSnippetName('');
+  };
+
+  const allSnippets = useMemo(() => {
+    // Merge defaults and user snippets for display
+    const user = snippets.filter((s) => !s.id?.startsWith('ex-'));
+    const defaults = DEFAULT_SNIPPETS;
+    return [...defaults, ...user];
+  }, [snippets]);
+
   const connected = status === 'connected';
   const connecting = status === 'connecting';
 
@@ -254,6 +329,75 @@ function App() {
               <span>⚠</span> {error}
             </div>
           )}
+
+          {/* Snippets Panel */}
+          <div className="snippets">
+            <div className="snippets-header">
+              <h3>Snippets</h3>
+              <span className="hint">Quickly insert example or saved messages</span>
+            </div>
+
+            <div className="snippets-body">
+              {allSnippets.length === 0 ? (
+                <div className="empty">No snippets available.</div>
+              ) : (
+                <div className="snippet-grid">
+                  {allSnippets.map((snip) => (
+                    <div key={snip.id} className="snippet-card" title={snip.name}>
+                      <div className="snippet-meta">
+                        <span className={`badge ${snip.type === 'json' ? 'badge-json' : 'badge-text'}`}>
+                          {snip.type}
+                        </span>
+                        <span className="snippet-name">{snip.name}</span>
+                      </div>
+                      <pre className="snippet-content">{snip.content}</pre>
+                      <div className="snippet-actions">
+                        <button
+                          className="btn ghost"
+                          onClick={() => applySnippet(snip)}
+                          aria-label={`Insert snippet ${snip.name}`}
+                        >
+                          Insert
+                        </button>
+                        {!snip.id.startsWith('ex-') && (
+                          <button
+                            className="btn"
+                            onClick={() => setSnippets((prev) => prev.filter((s) => s.id !== snip.id))}
+                            aria-label={`Delete snippet ${snip.name}`}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="snippet-save">
+              <div className="input-row">
+                <div className="input-group">
+                  <label htmlFor="snippet-name">Save current message as snippet</label>
+                  <input
+                    id="snippet-name"
+                    type="text"
+                    placeholder="Optional name/label (e.g., My Auth Message)"
+                    value={snippetName}
+                    onChange={(e) => setSnippetName(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn"
+                  onClick={saveCurrentAsSnippet}
+                  disabled={!message.trim()}
+                  aria-label="Save current message as snippet"
+                >
+                  Save Snippet
+                </button>
+              </div>
+            </div>
+          </div>
 
           <div className="compose">
             <div className="input-group">
