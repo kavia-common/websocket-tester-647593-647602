@@ -1,82 +1,52 @@
-# Lightweight React Template for KAVIA
+# WebSocket Tester Frontend
 
-This project provides a minimal React template with a clean, modern UI and minimal dependencies.
+A lightweight React application to test and interact with WebSocket servers. Connect to any WebSocket URL, send text or JSON messages, and view a real-time log of sent/received data.
 
 ## Features
 
-- **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
-- **Modern UI**: Clean, responsive design with KAVIA brand styling
-- **Fast**: Minimal dependencies for quick loading times
-- **Simple**: Easy to understand and modify
+- Connect to a WebSocket server via user-supplied URL (toggle ws/wss).
+- Send custom text and JSON messages (with JSON validation).
+- Receive and display messages in real time (pretty prints JSON).
+- Connection status and error notifications.
+- Log with timestamps, message direction badges, and clear log.
+- Modern, responsive, light theme UI without heavy frameworks.
 
-## Getting Started
+## Quick Start
 
-In the project directory, you can run:
+In the project directory, run:
 
-### `npm start`
-
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-### `npm test`
-
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## Customization
-
-### Colors
-
-The main brand colors are defined as CSS variables in `src/App.css`:
-
-```css
-:root {
-  --kavia-orange: #E87A41;
-  --kavia-dark: #1A1A1A;
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-}
+```bash
+npm install
+npm start
 ```
 
-### Components
+Open http://localhost:3000 to view in your browser.
 
-This template uses pure HTML/CSS components instead of a UI framework. You can find component styles in `src/App.css`. 
+## Usage
 
-Common components include:
-- Buttons (`.btn`, `.btn-large`)
-- Container (`.container`)
-- Navigation (`.navbar`)
-- Typography (`.title`, `.subtitle`, `.description`)
+1. Enter a WebSocket host or full URL. Example: `echo.websocket.events`
+   - Use the “Secure (wss)” switch to toggle between `wss://` and `ws://` if you provide only host/path.
+   - If you enter a full URL starting with ws:// or wss://, it will be used as-is.
+2. Click “Connect”. The status indicator will change on connect/disconnect.
+3. Type a message in the Message box. Enable the JSON switch to validate and pretty-print JSON.
+4. Click “Send” to send to the server.
+5. All sent and received messages appear in the Message Log with timestamps.
+6. Use “Clear Log” to clear the display.
 
-## Learn More
+Tip: Try the public echo server: `echo.websocket.events`
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Notes
 
-### Code Splitting
+- No environment configuration is required.
+- This app uses the native WebSocket browser API.
+- Errors are displayed inline under the URL controls.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Scripts
 
-### Analyzing the Bundle Size
+- `npm start` - Runs the app in development mode.
+- `npm test` - Launches the test runner.
+- `npm run build` - Builds the app for production.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## License
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT
